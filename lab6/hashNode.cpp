@@ -7,7 +7,9 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
-#include <time.h>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
 #include "hashNode.hpp"
 
 using namespace std;
@@ -60,6 +62,7 @@ void hashNode::dblArray(){
 	for(int i = 0; i < valuesSize; i++){
 		newArray[i] = values[i];
 	}
+	valuesSize = valuesSize*2;
 	values = newArray;
 }
 
@@ -70,8 +73,7 @@ string hashNode::getRandValue(){
     if(currSize == 0) {
         return "";
     } else {
-        srand(time(NULL));
-        int randVal = rand() % currSize;
+    	int randVal = rand()%currSize;
         return values[randVal];
     }
 }

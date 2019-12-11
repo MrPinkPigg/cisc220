@@ -11,9 +11,15 @@
 #include <stdlib.h>
 #include <string>
 #include <fstream>
+#include <ctime>
+
 
 int main(){
-    makeSeuss("DrSeuss.txt", "NewFile.txt", true, true);
+	srand( time(NULL) );
+    makeSeuss("DrSeuss.txt", "h1c1.txt", true, true);
+    makeSeuss("DrSeuss.txt", "h1c2.txt", true, false);
+    makeSeuss("DrSeuss.txt", "h2c1.txt", false, true);
+    makeSeuss("DrSeuss.txt", "h2c2.txt", false, false);
     return 0;
 }
 

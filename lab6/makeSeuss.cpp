@@ -17,6 +17,9 @@ makeSeuss::makeSeuss(string f1,string f2,bool h1, bool c1) {
 	fn = f1;
 	readFile();
 	writeFile();
+	cout << ht->collisionct1 << endl;
+	cout << ht->collisionct2 << endl;
+
 }
 
 void makeSeuss::readFile() {
@@ -27,6 +30,9 @@ void makeSeuss::readFile() {
 	ht->first = key;
 	while (infile >> value) { // loop getting single characters
 		cout << key <<": " << value << endl;
+		if(key == "Just" && value == "go"){
+			string k = key;
+		}
 		ht->addKeyValue(key,value);
 		key = value;
 		value = "";

@@ -41,51 +41,27 @@ hashMap::hashMap(bool hash, bool coll){
 //if h1 is true, the first hash function is used, and if itís false, the second is used.
 //if c1 is true, the first collision method is used, and if itís false, the second is used
 void hashMap::addKeyValue(string k, string v){
-    int index;
+    int index = getIndex(k);
 
-    if(h1){
-        index = calcHash(k);
+    if(map[index] == NULL){
+    	map[index] = new hashNode(k, v);
+    	numKeys++;
     } else {
-        index = calcHash2(k);
+    	map[index]->addValue(v);
     }
-
-    bool added = false;
-    bool first = false;
-    
-    while(!added){
-        if(map[index] == NULL){
-            map[index] = new hashNode(k, v);
-            added = true;
-        } else if (map[index]->keyword == k){
-            map[index]->addValue(v);
-            added = true;
-        } else {
-            
-            if(!first){
-                collisionct1++;
-                first = true;
-            } else {
-                collisionct2++;
-            }
-            
-            if(c1){
-                index = collHash1(index);
-            } else {
-                index = collHash2(index);
-            }
-        }
-    }
-    
-    numKeys++;
     
     //Rehash the map when at 70% capacity
-    if(numKeys >= mapSize * .7){
+    if(numKeys >= this->mapSize * .7){
         reHash();
     }
 }
 
+/*
+ * Determine the index at which to insert a specified key.
+ * Uses specified hashing algorithm and collision algorithms until
+ * the index is null or matching the supplied key
+ */
 int hashMap::getIndex(string k){
-    int numColl = collisionct1 + collisionct2;
     int index;
     
     if(h1){
@@ -94,22 +70,17 @@ int hashMap::getIndex(string k){
         index = calcHash2(k);
     }
     
-    if(map[index]->keyword == k){
+    if(map[index] == NULL || map[index]->keyword == k){
         return index;
     } else {
-        for(int i = 0; i < numColl; i ++){
-            if(c1){
-                index = collHash1(index);
-            } else {
-                index = collHash2(index);
-            }
-            if(map[index]->keyword == k){
-                return index;
-            }
-        }
+		collisionct1++;
+		if(c1){
+			index = collHash1(k, index);
+		} else {
+			index = collHash2(k, index);
+		}
+		return index;
     }
-    
-	return -1;
 }
 
 /*
@@ -119,12 +90,13 @@ int hashMap::getIndex(string k){
  */
 int hashMap::calcHash(string k){
 	int output = 0;
+	int length = k.length();
 
-	for(int i = 0; i < k.length(); i++){
+	for(int i = 0; i < length; i++){
 		output += int(k.at(i));
 	}
 
-	return output % mapSize;
+	return output % this->mapSize;
 }
 
 /*
@@ -135,19 +107,20 @@ int hashMap::calcHash(string k){
 */
 int hashMap::calcHash2(string k){
 	int output = 0;
+	int length = k.length();
 
-    for(int i = 0; i < k.length(); i++){
+	for(int i = 0; i < length; i++){
         output += int(k.at(i)) * 21^i;
     }
 
-	return output % mapSize;
+	return output % this->mapSize;
 }
 
 // I used a binary search on an array of prime numbers to find the closest prime
 // to double the map Size, and then set mapSize to that new prime. You can include as one of the fields an array of
 // prime numbers, or you can write a function that calculates the next prime number. Whichever you prefer.
 void hashMap::getClosestPrime(){
-    int curr = mapSize * 2;
+    int curr = this->mapSize * 2;
     bool primeFound = false;
     
     //Find the next prime number
@@ -163,24 +136,30 @@ void hashMap::getClosestPrime(){
         }
     }
     
-    mapSize = curr;
+    this->mapSize = curr;
 }
 
 /*
  * doubles size of array, and rehashes the keys in the map
  */
 void hashMap::reHash(){
-    int currSize = mapSize;
+    int oldSize = this->mapSize;
     getClosestPrime();
-    hashMap *newMap = new hashMap(h1, c1);
+    int newSize = this->mapSize;
 
-    for(int i = 0; i < currSize; i++){
-    	cout << "testloop" << endl;
-        newMap->addKeyValue(map[i]->keyword, map[i]->values[0]);
+    //Create a new array to hold rehashed nodes in the updated size
+    hashNode **n = map;
+    map = new hashNode *[newSize];
+    for(int i = 0; i < newSize; i++){
+    	map[i] = NULL;
     }
-cout << "test4" << endl;
-    map = newMap->map;
-cout << "test5" << endl;
+
+    for(int i = 0; i < oldSize; i++){
+    	if(n[i] != NULL){
+    		int index = getIndex(n[i]->keyword);
+    		map[index] = n[i];
+    	}
+    }
 }
 
 /*
@@ -188,40 +167,69 @@ cout << "test5" << endl;
  * the hash Index of the key and returns it. Returns 0 if incrementing
  * the index results in a value larger than the size of the hashMap.
  */
-int hashMap::collHash1(int i){
-    i++;
-    
-    if(i >= mapSize){
-        return 0;
-    } else {
-        return i;
-    }
+int hashMap::collHash1(string k, int i){
+
+	while(map[i] != NULL){
+		if(map[i]->keyword == k){
+			return i;
+		} else {
+			collisionct2++;
+			if(i == mapSize - 1){
+				i = 0;
+			} else {
+				i++;
+			}
+		}
+	}
+
+	return i;
 }
 
 /*
- * Method for dealing with collisions during hashing - decrements
- * the hash Index of the key and returns it. Returns mapSize if decrementing
- * the index results in a value smaller than 0.
+ * Method for dealing with collisions during hashing - increments
+ * the hash Index of the key by i^2, where i increments each time
+ * another collision occurs, and returns it.
  */
-int hashMap::collHash2(int i){
-    i--;
-    
-    if(i < 0){
-        return mapSize;
-    } else {
-        return i;
-    }
+int hashMap::collHash2(string k, int i){
+	int count = 1;
+	while(map[i] != NULL){
+		 if(map[i]->keyword == k){
+			 return i;
+		 } else {
+			 collisionct2++;
+			 i += count^2;
+			 i = i % mapSize;
+			 count++;
+		 }
+	}
+
+	return i;
 }
 
 int hashMap::findKey(string k){
-    return getIndex(k);
+    int index = getIndex(k);
+    if(map[index] == NULL){
+    	return -1;
+    } else {
+    	return index;
+    }
 }
 
 void hashMap::printMap(){
-    for(int i = 0; i < mapSize; i++){
-        cout << i << ": " << map[i]->keyword;
-        for(int x = 0; x < map[i]->valuesSize; x++){
-            cout << map[i]->values[x] << ", " << endl;
-        }
+	int size = this->mapSize;
+    for(int i = 0; i < size; i++){
+    	if(map[i] == NULL){
+    		cout <<  i  << ": "   << endl;
+    	} else {
+			cout << i << ": " << map[i]->keyword << ": ";
+			for(int x = 0; x < map[i]->valuesSize; x++){
+				if(map[i]->values[x] == ""){
+					break;
+				} else {
+					cout << map[i]->values[x] << ", ";
+				}
+			}
+			cout << endl;
+    	}
     }
 }
